@@ -10,68 +10,114 @@
     #list li.done .text { text-decoration: line-through; color: #aaa; }
     #list li .text { flex: 1; cursor: pointer; }
     #list li .del { border: none; background: transparent; color: #e74c3c; cursor: pointer; }
+    .filters { margin: 12px 0; }
   </style>
 </head>
 <body>
   <h1>Todo V2.0</h1>
+
   <div>
     <input id="new-todo" type="text" placeholder="输入任务" />
     <button id="add-btn">添加</button>
   </div>
+
+  <!-- 新增：筛选按钮 -->
+  <div class="filters">
+    <button data-filter="all">全部</button>
+    <button data-filter="active">未完成</button>
+    <button data-filter="completed">已完成</button>
+  </div>
+
   <ul id="list"></ul>
 
   <script>
+    /* 状态 */
     let todos = [];
+    let filter = 'all'; // 新增：all | active | completed
 
+    /* 操作函数：不可变更新 */
     function addTodo(text) {
       if (!text.trim()) return;
       todos = [...todos, { id: Date.now(), text: text.trim(), done: false }];
       render();
     }
+
     function removeTodo(id) {
       todos = todos.filter(t => t.id !== id);
       render();
     }
+
     function toggleTodo(id) {
-      todos = todos.map(t => t.id === id ? { ...t, done: !t.done } : t);
+      todos = todos.map(t =>
+        t.id === id ? { ...t, done: !t.done } : t
+      );
       render();
     }
 
+    /* 渲染 */
     function render() {
       const list = document.querySelector('#list');
       list.innerHTML = '';
-      if (todos.length === 0) {
+
+      // 新增：根据 filter 得到要显示的任务
+      const visibleTodos = todos.filter(todo => {
+        if (filter === 'active') return !todo.done;
+        if (filter === 'completed') return todo.done;
+        return true;
+      });
+
+      // 修改：改用 visibleTodos 判断是否为空
+      if (visibleTodos.length === 0) {
         const li = document.createElement('li');
         li.textContent = '暂无任务';
         list.appendChild(li);
         return;
       }
-      todos.forEach(todo => {
+
+      // 修改：改用 visibleTodos 循环
+      visibleTodos.forEach(todo => {
         const li = document.createElement('li');
         if (todo.done) li.classList.add('done');
+
         const span = document.createElement('span');
         span.className = 'text';
         span.textContent = todo.text;
         span.addEventListener('click', () => toggleTodo(todo.id));
+
         const del = document.createElement('button');
         del.className = 'del';
         del.textContent = '×';
         del.addEventListener('click', () => removeTodo(todo.id));
+
         li.appendChild(span);
         li.appendChild(del);
         list.appendChild(li);
       });
     }
 
+    /* 事件 */
     document.querySelector('#add-btn').addEventListener('click', () => {
       const input = document.querySelector('#new-todo');
       addTodo(input.value);
       input.value = '';
     });
+
     document.querySelector('#new-todo').addEventListener('keydown', e => {
-      if (e.key === 'Enter') { addTodo(e.target.value); e.target.value = ''; }
+      if (e.key === 'Enter') {
+        addTodo(e.target.value);
+        e.target.value = '';
+      }
     });
 
+    // 新增：筛选按钮事件
+    document.querySelectorAll('.filters button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    /* 初始化 */
     render();
   </script>
 </body>
