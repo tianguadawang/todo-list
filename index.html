@@ -21,7 +21,6 @@
     <button id="add-btn">添加</button>
   </div>
 
-  <!-- 新增：筛选按钮 -->
   <div class="filters">
     <button data-filter="all">全部</button>
     <button data-filter="active">未完成</button>
@@ -33,17 +32,19 @@
   <script>
     /* 状态 */
     let todos = [];
-    let filter = 'all'; // 新增：all | active | completed
+    let filter = 'all'; // all | active | completed
 
-    /* 操作函数：不可变更新 */
+    /* 操作函数：不可变更新，三步口诀：改数据 → 保存 → 重渲染 */
     function addTodo(text) {
       if (!text.trim()) return;
       todos = [...todos, { id: Date.now(), text: text.trim(), done: false }];
+      save();      // 新增
       render();
     }
 
     function removeTodo(id) {
       todos = todos.filter(t => t.id !== id);
+      save();      // 新增
       render();
     }
 
@@ -51,7 +52,23 @@
       todos = todos.map(t =>
         t.id === id ? { ...t, done: !t.done } : t
       );
+      save();      // 新增
       render();
+    }
+
+    /* 新增：保存与恢复 */
+    function save() {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem('todos');
+        todos = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        todos = [];
+        console.warn('localStorage 数据损坏，已重置');
+      }
     }
 
     /* 渲染 */
@@ -59,14 +76,12 @@
       const list = document.querySelector('#list');
       list.innerHTML = '';
 
-      // 新增：根据 filter 得到要显示的任务
       const visibleTodos = todos.filter(todo => {
         if (filter === 'active') return !todo.done;
         if (filter === 'completed') return todo.done;
         return true;
       });
 
-      // 修改：改用 visibleTodos 判断是否为空
       if (visibleTodos.length === 0) {
         const li = document.createElement('li');
         li.textContent = '暂无任务';
@@ -74,7 +89,6 @@
         return;
       }
 
-      // 修改：改用 visibleTodos 循环
       visibleTodos.forEach(todo => {
         const li = document.createElement('li');
         if (todo.done) li.classList.add('done');
@@ -109,7 +123,6 @@
       }
     });
 
-    // 新增：筛选按钮事件
     document.querySelectorAll('.filters button').forEach(btn => {
       btn.addEventListener('click', () => {
         filter = btn.dataset.filter;
@@ -117,7 +130,8 @@
       });
     });
 
-    /* 初始化 */
+    /* 初始化：先恢复，再渲染（修改） */
+    load();
     render();
   </script>
 </body>
