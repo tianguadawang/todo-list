@@ -1,5 +1,144 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8" /><title>Todo V2.0</title></head>
-<body><h1>Todo V2.0</h1><p>项目初始化</p></body>
+<head>
+  <meta charset="UTF-8" />
+  <title>Todo V2.0</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; }
+    #list { list-style: none; padding: 0; }
+    #list li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
+    #list li.done .text { text-decoration: line-through; color: #aaa; }
+    #list li .text { flex: 1; cursor: pointer; }
+    #list li .del { border: none; background: transparent; color: #e74c3c; cursor: pointer; }
+    .filters { margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <h1>Todo V2.0</h1>
+
+  <div>
+    <input id="new-todo" type="text" placeholder="输入任务" />
+    <button id="add-btn">添加</button>
+  </div>
+
+  <div class="filters">
+    <button data-filter="all">全部</button>
+    <button data-filter="active">未完成</button>
+    <button data-filter="completed">已完成</button>
+  </div>
+
+  <ul id="list"></ul>
+
+  <script>
+    /* 状态 */
+    let todos = [];
+    let filter = 'all'; // all | active | completed
+
+    /* 操作函数：不可变更新，三步口诀：改数据 → 保存 → 重渲染 */
+    function addTodo(text) {
+      if (!text.trim()) return;
+      todos = [...todos, { id: Date.now(), text: text.trim(), done: false }];
+      save();      // 新增
+      render();
+    }
+
+    function removeTodo(id) {
+      todos = todos.filter(t => t.id !== id);
+      save();      // 新增
+      render();
+    }
+
+    function clearCompleted() {
+      todos = todos.filter(t => !t.done);
+      save();
+      render();
+    }
+
+    function toggleTodo(id) {
+      todos = todos.map(t =>
+        t.id === id ? { ...t, done: !t.done } : t
+      );
+      save();      // 新增
+      render();
+    }
+
+    /* 新增：保存与恢复 */
+    function save() {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem('todos');
+        todos = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        todos = [];
+        console.warn('localStorage 数据损坏，已重置');
+      }
+    }
+
+    /* 渲染 */
+    function render() {
+      const list = document.querySelector('#list');
+      list.innerHTML = '';
+
+      const visibleTodos = todos.filter(todo => {
+        if (filter === 'active') return !todo.done;
+        if (filter === 'completed') return todo.done;
+        return true;
+      });
+
+      if (visibleTodos.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = '暂无任务';
+        list.appendChild(li);
+        return;
+      }
+
+      visibleTodos.forEach(todo => {
+        const li = document.createElement('li');
+        if (todo.done) li.classList.add('done');
+
+        const span = document.createElement('span');
+        span.className = 'text';
+        span.textContent = todo.text;
+        span.addEventListener('click', () => toggleTodo(todo.id));
+
+        const del = document.createElement('button');
+        del.className = 'del';
+        del.textContent = '×';
+        del.addEventListener('click', () => removeTodo(todo.id));
+
+        li.appendChild(span);
+        li.appendChild(del);
+        list.appendChild(li);
+      });
+    }
+
+    /* 事件 */
+    document.querySelector('#add-btn').addEventListener('click', () => {
+      const input = document.querySelector('#new-todo');
+      addTodo(input.value);
+      input.value = '';
+    });
+
+    document.querySelector('#new-todo').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        addTodo(e.target.value);
+        e.target.value = '';
+      }
+    });
+
+    document.querySelectorAll('.filters button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    /* 初始化：先恢复，再渲染（修改） */
+    load();
+    render();
+  </script>
+</body>
 </html>
