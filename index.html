@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Todo V2.0 - W8 修复版</title>
+  <title>Todo V2.0 - W8 编辑分支</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
     #list { list-style: none; padding: 0; }
@@ -10,6 +10,7 @@
     #list li.done .text { text-decoration: line-through; color: #aaa; }
     #list li .text { flex: 1; cursor: pointer; }
     #list li .del { border: none; background: transparent; color: #e74c3c; cursor: pointer; font-size: 16px; }
+    #list li .edit { border: none; background: transparent; color: #4a90e2; cursor: pointer; font-size: 14px; }
     .filters { display: flex; gap: 8px; margin: 12px 0; }
     .filters button { flex: 1; padding: 6px; border: 1px solid #ddd; background: #fff; border-radius: 6px; cursor: pointer; }
     .filters button.active { background: #4a90e2; color: #fff; border-color: #4a90e2; }
@@ -110,12 +111,18 @@
           span.dataset.action = 'toggle';
           span.textContent = todo.text;
 
+          const edit = document.createElement('button');
+          edit.className = 'edit';
+          edit.dataset.action = 'edit';
+          edit.textContent = '✎';
+
           const del = document.createElement('button');
           del.className = 'del';
           del.dataset.action = 'delete';
           del.textContent = '×';
 
           li.appendChild(span);
+          li.appendChild(edit);
           li.appendChild(del);
           list.appendChild(li);
         });
@@ -129,7 +136,7 @@
       });
     }
 
-    /* ===== 修复版事件委托 ===== */
+    /* ===== 事件委托：delete / edit / toggle 三分支分流 ===== */
     const list = document.querySelector('#list');
     list.addEventListener('click', (e) => {
       if (!(e.target instanceof Element)) return;
@@ -140,6 +147,18 @@
 
       if (e.target.closest('[data-action="delete"]')) {
         removeTodo(id);
+      } else if (e.target.closest('[data-action="edit"]')) {
+        const todo = todos.find(t => String(t.id) === String(id));
+        if (!todo) return;
+        const next = prompt('编辑任务', todo.text);
+        if (next === null) return;          // 点取消
+        const text = next.trim();
+        if (!text) return;                   // 空文本不更新
+        todos = todos.map(t =>
+          String(t.id) === String(id) ? { ...t, text } : t
+        );
+        save();
+        render();
       } else if (e.target.closest('[data-action="toggle"]')) {
         toggleTodo(id);
       }
