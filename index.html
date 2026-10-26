@@ -2,15 +2,19 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Todo V2.0</title>
+  <title>Todo V2.0 - W8</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; }
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
     #list { list-style: none; padding: 0; }
-    #list li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
+    #list li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
     #list li.done .text { text-decoration: line-through; color: #aaa; }
     #list li .text { flex: 1; cursor: pointer; }
-    #list li .del { border: none; background: transparent; color: #e74c3c; cursor: pointer; }
-    .filters { margin: 12px 0; }
+    #list li .del { border: none; background: transparent; color: #e74c3c; cursor: pointer; font-size: 16px; }
+    .filters { display: flex; gap: 8px; margin: 12px 0; }
+    .filters button { flex: 1; padding: 6px; border: 1px solid #ddd; background: #fff; border-radius: 6px; cursor: pointer; }
+    .filters button.active { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+    .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: #666; }
+    #clear-completed { border: none; background: transparent; color: #e74c3c; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -22,47 +26,24 @@
   </div>
 
   <div class="filters">
-    <button data-filter="all">全部</button>
+    <button data-filter="all" class="active">全部</button>
     <button data-filter="active">未完成</button>
     <button data-filter="completed">已完成</button>
   </div>
 
   <ul id="list"></ul>
 
+  <div class="footer">
+    <span id="count">0 项未完成</span>
+    <button id="clear-completed">清除已完成</button>
+  </div>
+
   <script>
-    /* 状态 */
+    /* ========== 状态 ========== */
     let todos = [];
-    let filter = 'all'; // all | active | completed
+    let filter = 'all';
 
-    /* 操作函数：不可变更新，三步口诀：改数据 → 保存 → 重渲染 */
-    function addTodo(text) {
-      if (!text.trim()) return;
-      todos = [...todos, { id: Date.now(), text: text.trim(), done: false }];
-      save();      // 新增
-      render();
-    }
-
-    function removeTodo(id) {
-      todos = todos.filter(t => t.id !== id);
-      save();      // 新增
-      render();
-    }
-
-    function clearCompleted() {
-      todos = todos.filter(t => !t.done);
-      save();
-      render();
-    }
-
-    function toggleTodo(id) {
-      todos = todos.map(t =>
-        t.id === id ? { ...t, done: !t.done } : t
-      );
-      save();      // 新增
-      render();
-    }
-
-    /* 新增：保存与恢复 */
+    /* ========== 持久化 ========== */
     function save() {
       localStorage.setItem('todos', JSON.stringify(todos));
     }
@@ -77,7 +58,35 @@
       }
     }
 
-    /* 渲染 */
+    /* ========== 操作函数（不可变更新） ========== */
+    function addTodo(text) {
+      if (!text.trim()) return;
+      todos = [...todos, { id: Date.now(), text: text.trim(), done: false }];
+      save();
+      render();
+    }
+
+    function removeTodo(id) {
+      todos = todos.filter(t => String(t.id) !== String(id));
+      save();
+      render();
+    }
+
+    function toggleTodo(id) {
+      todos = todos.map(t =>
+        String(t.id) === String(id) ? { ...t, done: !t.done } : t
+      );
+      save();
+      render();
+    }
+
+    function clearCompleted() {
+      todos = todos.filter(t => !t.done);
+      save();
+      render();
+    }
+
+    /* ========== 渲染（只打标记，不绑事件） ========== */
     function render() {
       const list = document.querySelector('#list');
       list.innerHTML = '';
@@ -92,30 +101,53 @@
         const li = document.createElement('li');
         li.textContent = '暂无任务';
         list.appendChild(li);
-        return;
+      } else {
+        visibleTodos.forEach(todo => {
+          const li = document.createElement('li');
+          li.dataset.id = todo.id;
+          if (todo.done) li.classList.add('done');
+
+          const span = document.createElement('span');
+          span.className = 'text';
+          span.dataset.action = 'toggle';
+          span.textContent = todo.text;
+
+          const del = document.createElement('button');
+          del.className = 'del';
+          del.dataset.action = 'delete';
+          del.textContent = '×';
+
+          li.appendChild(span);
+          li.appendChild(del);
+          list.appendChild(li);
+        });
       }
 
-      visibleTodos.forEach(todo => {
-        const li = document.createElement('li');
-        if (todo.done) li.classList.add('done');
+      const activeCount = todos.filter(t => !t.done).length;
+      document.querySelector('#count').textContent = `${activeCount} 项未完成`;
 
-        const span = document.createElement('span');
-        span.className = 'text';
-        span.textContent = todo.text;
-        span.addEventListener('click', () => toggleTodo(todo.id));
-
-        const del = document.createElement('button');
-        del.className = 'del';
-        del.textContent = '×';
-        del.addEventListener('click', () => removeTodo(todo.id));
-
-        li.appendChild(span);
-        li.appendChild(del);
-        list.appendChild(li);
+      document.querySelectorAll('.filters button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
       });
     }
 
-    /* 事件 */
+    /* ========== 事件委托（父容器 ul 统一处理） ========== */
+    const list = document.querySelector('#list');
+    list.addEventListener('click', (e) => {
+      if (!(e.target instanceof Element)) return;
+      const item = e.target.closest('li');
+      if (!item || !list.contains(item)) return;
+      const id = item.dataset.id;
+      if (!id) return;
+
+      if (e.target.closest('[data-action="delete"]')) {
+        removeTodo(id);
+      } else if (e.target.closest('[data-action="toggle"]')) {
+        toggleTodo(id);
+      }
+    });
+
+    /* ========== 其他事件 ========== */
     document.querySelector('#add-btn').addEventListener('click', () => {
       const input = document.querySelector('#new-todo');
       addTodo(input.value);
@@ -136,7 +168,9 @@
       });
     });
 
-    /* 初始化：先恢复，再渲染（修改） */
+    document.querySelector('#clear-completed').addEventListener('click', clearCompleted);
+
+    /* ========== 初始化 ========== */
     load();
     render();
   </script>
