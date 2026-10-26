@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Todo V2.0 - W8 缺陷版</title>
+  <title>Todo V2.0 - W8 修复版</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
     #list { list-style: none; padding: 0; }
@@ -129,7 +129,7 @@
       });
     }
 
-    /* ===== 缺陷版事件委托：删除后没有 else，继续执行 toggleTodo ===== */
+    /* ===== 修复版事件委托 ===== */
     const list = document.querySelector('#list');
     list.addEventListener('click', (e) => {
       if (!(e.target instanceof Element)) return;
@@ -138,11 +138,11 @@
       const id = item.dataset.id;
       if (!id) return;
 
-      const delBtn = e.target.closest('[data-action="delete"]');
-      if (delBtn && item.contains(delBtn)) {
+      if (e.target.closest('[data-action="delete"]')) {
         removeTodo(id);
+      } else if (e.target.closest('[data-action="toggle"]')) {
+        toggleTodo(id);
       }
-      toggleTodo(id);
     });
 
     document.querySelector('#add-btn').addEventListener('click', () => {
