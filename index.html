@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Todo V2.0 - W8</title>
+  <title>Todo V2.0 - W8 缺陷版</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
     #list { list-style: none; padding: 0; }
@@ -39,11 +39,9 @@
   </div>
 
   <script>
-    /* ========== 状态 ========== */
     let todos = [];
     let filter = 'all';
 
-    /* ========== 持久化 ========== */
     function save() {
       localStorage.setItem('todos', JSON.stringify(todos));
     }
@@ -58,7 +56,6 @@
       }
     }
 
-    /* ========== 操作函数（不可变更新） ========== */
     function addTodo(text) {
       if (!text.trim()) return;
       todos = [...todos, { id: Date.now(), text: text.trim(), done: false }];
@@ -67,12 +64,14 @@
     }
 
     function removeTodo(id) {
+      console.log('removeTodo:', id);
       todos = todos.filter(t => String(t.id) !== String(id));
       save();
       render();
     }
 
     function toggleTodo(id) {
+      console.log('toggleTodo:', id);
       todos = todos.map(t =>
         String(t.id) === String(id) ? { ...t, done: !t.done } : t
       );
@@ -86,7 +85,6 @@
       render();
     }
 
-    /* ========== 渲染（只打标记，不绑事件） ========== */
     function render() {
       const list = document.querySelector('#list');
       list.innerHTML = '';
@@ -131,7 +129,7 @@
       });
     }
 
-    /* ========== 事件委托（父容器 ul 统一处理） ========== */
+    /* ===== 缺陷版事件委托：删除后没有 else，继续执行 toggleTodo ===== */
     const list = document.querySelector('#list');
     list.addEventListener('click', (e) => {
       if (!(e.target instanceof Element)) return;
@@ -140,14 +138,13 @@
       const id = item.dataset.id;
       if (!id) return;
 
-      if (e.target.closest('[data-action="delete"]')) {
+      const delBtn = e.target.closest('[data-action="delete"]');
+      if (delBtn && item.contains(delBtn)) {
         removeTodo(id);
-      } else if (e.target.closest('[data-action="toggle"]')) {
-        toggleTodo(id);
       }
+      toggleTodo(id);
     });
 
-    /* ========== 其他事件 ========== */
     document.querySelector('#add-btn').addEventListener('click', () => {
       const input = document.querySelector('#new-todo');
       addTodo(input.value);
@@ -170,7 +167,6 @@
 
     document.querySelector('#clear-completed').addEventListener('click', clearCompleted);
 
-    /* ========== 初始化 ========== */
     load();
     render();
   </script>
