@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Todo V2.0 - W9 TS</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+    #list { list-style: none; padding: 0; }
+    #list li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+    #list li.done .text { text-decoration: line-through; color: #aaa; }
+    #list li .text { flex: 1; cursor: pointer; }
+    #list li .del { border: none; background: transparent; color: #e74c3c; cursor: pointer; font-size: 16px; }
+    #list li .edit { border: none; background: transparent; color: #4a90e2; cursor: pointer; font-size: 14px; }
+    .filters { display: flex; gap: 8px; margin: 12px 0; }
+    .filters button { flex: 1; padding: 6px; border: 1px solid #ddd; background: #fff; border-radius: 6px; cursor: pointer; }
+    .filters button.active { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+    .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: #666; }
+    #clear-completed { border: none; background: transparent; color: #e74c3c; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Todo V2.0</h1>
+
+  <div>
+    <input id="new-todo" type="text" placeholder="输入任务" />
+    <button id="add-btn">添加</button>
+  </div>
+
+  <div class="filters">
+    <button data-filter="all" class="active">全部</button>
+    <button data-filter="active">未完成</button>
+    <button data-filter="completed">已完成</button>
+  </div>
+
+  <ul id="list"></ul>
+
+  <div class="footer">
+    <span id="count">0 项未完成</span>
+    <button id="clear-completed">清除已完成</button>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
