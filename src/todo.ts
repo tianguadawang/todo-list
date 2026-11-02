@@ -11,6 +11,14 @@ export type Filter = 'all' | 'active' | 'completed';
 let todos: Todo[] = [];
 let filter: Filter = 'all';
 
+let lastId = 0;
+
+function nextId(): number {
+  const now = Date.now();
+  lastId = now > lastId ? now : lastId + 1;
+  return lastId;
+}
+
 /* ========== 3. 测试辅助 ========== */
 export function getTodos(): Todo[] {
   return todos;
@@ -74,7 +82,7 @@ export function addTodo(text: string): void {
   if (typeof text !== 'string') return;
   const trimmed = text.trim();
   if (!trimmed) return;
-  todos = [...todos, { id: Date.now(), text: trimmed, done: false }];
+  todos = [...todos, { id: nextId(), text: trimmed, done: false }];
   save();
 }
 

@@ -57,3 +57,47 @@ describe('toggleTodo', () => {
     expect(getTodos()).toHaveLength(1);
   });
 });
+
+describe('AI 测试审查后的修补用例', () => {
+  beforeEach(() => {
+    resetTodos();
+    localStorage.clear();
+  });
+
+  it('空字符串不添加（精确断言长度 0）', () => {
+    addTodo('');
+    expect(getTodos()).toHaveLength(0);
+  });
+
+  it('纯空格不添加（精确断言长度 0）', () => {
+    addTodo('   ');
+    expect(getTodos()).toHaveLength(0);
+  });
+
+  it('trim 后存储（精确断言 text）', () => {
+    addTodo('  hello  ');
+    expect(getTodos()[0].text).toBe('hello');
+  });
+
+  it('toggle 两次回到未完成（精确断言 done 为 false）', () => {
+    addTodo('a');
+    const id = getTodos()[0].id;
+    toggleTodo(id);
+    toggleTodo(id);
+    expect(getTodos()[0].done).toBe(false);
+  });
+
+  it('重复 text 产生两条独立记录（id 不同）', () => {
+    addTodo('same');
+    addTodo('same');
+    expect(getTodos()).toHaveLength(2);
+    expect(getTodos()[0].id).not.toBe(getTodos()[1].id);
+  });
+
+  it('NaN id 不修改任何任务', () => {
+    addTodo('a');
+    const before = getTodos()[0].done;
+    toggleTodo(NaN);
+    expect(getTodos()[0].done).toBe(before);
+  });
+});
