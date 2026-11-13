@@ -10,7 +10,6 @@ export type Filter = 'all' | 'active' | 'completed';
 /* ========== 2. 状态 ========== */
 let todos: Todo[] = [];
 let filter: Filter = 'all';
-
 let lastId = 0;
 
 function nextId(): number {
@@ -54,6 +53,7 @@ function isTodoArray(value: unknown): value is Todo[] {
 
 /* ========== 5. 持久化 ========== */
 function save(): void {
+  if (typeof localStorage === 'undefined') return;
   localStorage.setItem('todos', JSON.stringify(todos));
 }
 
@@ -65,15 +65,9 @@ export function load(): void {
       return;
     }
     const parsed: unknown = JSON.parse(raw);
-    if (isTodoArray(parsed)) {
-      todos = parsed;
-    } else {
-      todos = [];
-      console.warn('localStorage 数据形状不合法，已重置');
-    }
-  } catch (e) {
+    todos = isTodoArray(parsed) ? parsed : [];
+  } catch {
     todos = [];
-    console.warn('localStorage 数据损坏，已重置');
   }
 }
 
@@ -94,6 +88,7 @@ export function removeTodo(id: number): void {
 
 export function toggleTodo(id: number): void {
   if (typeof id !== 'number' || Number.isNaN(id)) return;
+  if (!todos.some(t => t.id === id)) return;
   todos = todos.map(t =>
     t.id === id ? { ...t, done: !t.done } : t
   );
@@ -105,47 +100,56 @@ export function clearCompleted(): void {
   save();
 }
 
-/* ========== 7. 渲染 ========== */
+/* ========== 7. 筛选（从 render 里抽出来，降复杂度） ========== */
+function getVisibleTodos(): Todo[] {
+  return todos.filter(todo => {
+    if (filter === 'active') return !todo.done;
+    if (filter === 'completed') return todo.done;
+    return true;
+  });
+}
+
+/* ========== 8. 创建单个 li（从 render 里抽出来） ========== */
+function createTodoItem(todo: Todo): HTMLLIElement {
+  const li = document.createElement('li');
+  li.dataset.id = String(todo.id);
+  if (todo.done) li.classList.add('done');
+
+  const span = document.createElement('span');
+  span.className = 'text';
+  span.dataset.action = 'toggle';
+  span.textContent = todo.text;
+
+  const edit = document.createElement('button');
+  edit.className = 'edit';
+  edit.dataset.action = 'edit';
+  edit.textContent = '✎';
+
+  const del = document.createElement('button');
+  del.className = 'del';
+  del.dataset.action = 'delete';
+  del.textContent = '×';
+
+  li.appendChild(span);
+  li.appendChild(edit);
+  li.appendChild(del);
+  return li;
+}
+
+/* ========== 9. 渲染 ========== */
 export function render(): void {
   const list = document.querySelector<HTMLUListElement>('#list');
   if (!list) return;
   list.innerHTML = '';
 
-  const visibleTodos = todos.filter(todo => {
-    if (filter === 'active') return !todo.done;
-    if (filter === 'completed') return todo.done;
-    return true;
-  });
-
+  const visibleTodos = getVisibleTodos();
   if (visibleTodos.length === 0) {
     const li = document.createElement('li');
     li.textContent = '暂无任务';
     list.appendChild(li);
   } else {
     visibleTodos.forEach(todo => {
-      const li = document.createElement('li');
-      li.dataset.id = String(todo.id);
-      if (todo.done) li.classList.add('done');
-
-      const span = document.createElement('span');
-      span.className = 'text';
-      span.dataset.action = 'toggle';
-      span.textContent = todo.text;
-
-      const edit = document.createElement('button');
-      edit.className = 'edit';
-      edit.dataset.action = 'edit';
-      edit.textContent = '✎';
-
-      const del = document.createElement('button');
-      del.className = 'del';
-      del.dataset.action = 'delete';
-      del.textContent = '×';
-
-      li.appendChild(span);
-      li.appendChild(edit);
-      li.appendChild(del);
-      list.appendChild(li);
+      list.appendChild(createTodoItem(todo));
     });
   }
 
@@ -160,7 +164,29 @@ export function render(): void {
   });
 }
 
-/* ========== 8. 事件委托 ========== */
+/* ========== 10. 事件委托 ========== */
+function handleDelete(id: number): void {
+  removeTodo(id);
+  render();
+}
+
+function handleEdit(id: number): void {
+  const todo = todos.find(t => t.id === id);
+  if (!todo) return;
+  const next = prompt('编辑任务', todo.text);
+  if (next === null) return;
+  const text = next.trim();
+  if (!text) return;
+  todos = todos.map(t => (t.id === id ? { ...t, text } : t));
+  save();
+  render();
+}
+
+function handleToggle(id: number): void {
+  toggleTodo(id);
+  render();
+}
+
 export function bindEvents(): void {
   const list = document.querySelector<HTMLUListElement>('#list');
   if (!list) return;
@@ -175,22 +201,12 @@ export function bindEvents(): void {
     if (Number.isNaN(id)) return;
 
     if (e.target.closest('[data-action="delete"]')) {
-      removeTodo(id);
+      handleDelete(id);
     } else if (e.target.closest('[data-action="edit"]')) {
-      const todo = todos.find(t => t.id === id);
-      if (!todo) return;
-      const next = prompt('编辑任务', todo.text);
-      if (next === null) return;
-      const text = next.trim();
-      if (!text) return;
-      todos = todos.map(t =>
-        t.id === id ? { ...t, text } : t
-      );
-      save();
+      handleEdit(id);
     } else if (e.target.closest('[data-action="toggle"]')) {
-      toggleTodo(id);
+      handleToggle(id);
     }
-    render();
   });
 
   const addBtn = document.querySelector<HTMLButtonElement>('#add-btn');
