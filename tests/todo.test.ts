@@ -101,3 +101,17 @@ describe('AI 测试审查后的修补用例', () => {
     expect(getTodos()[0].done).toBe(before);
   });
 });
+
+describe('业务防御：无效 id 不触发持久化', () => {
+  beforeEach(() => {
+    resetTodos();
+    localStorage.clear();
+  });
+
+  it('toggleTodo 不存在的 id 不写入 localStorage', () => {
+    addTodo('A');
+    localStorage.clear(); // 清掉 addTodo 的写入
+    toggleTodo(999999);
+    expect(localStorage.getItem('todos')).toBeNull();
+  });
+});
