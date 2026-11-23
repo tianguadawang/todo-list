@@ -28,15 +28,7 @@ export function resetTodos(): void {
   filter = 'all';
 }
 
-export function getFilter(): Filter {
-  return filter;
-}
-
-export function setFilter(f: Filter): void {
-  filter = f;
-}
-
-/* ========== 4. 运行时校验（严禁 any） ========== */
+/* ========== 4. 运行时校验 ========== */
 function isTodo(value: unknown): value is Todo {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
@@ -51,39 +43,17 @@ function isTodoArray(value: unknown): value is Todo[] {
   return Array.isArray(value) && value.every(isTodo);
 }
 
-/* ========== 5. 持久化 ========== */
-function save(): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem('todos', JSON.stringify(todos));
-}
-
-export function load(): void {
-  try {
-    const raw = localStorage.getItem('todos');
-    if (!raw) {
-      todos = [];
-      return;
-    }
-    const parsed: unknown = JSON.parse(raw);
-    todos = isTodoArray(parsed) ? parsed : [];
-  } catch {
-    todos = [];
-  }
-}
-
-/* ========== 6. 操作函数（不可变更新） ========== */
+/* ========== 5. 纯函数操作逻辑（供 React 调用和测试） ========== */
 export function addTodo(text: string): void {
   if (typeof text !== 'string') return;
   const trimmed = text.trim();
   if (!trimmed) return;
   todos = [...todos, { id: nextId(), text: trimmed, done: false }];
-  save();
 }
 
 export function removeTodo(id: number): void {
   if (typeof id !== 'number' || Number.isNaN(id)) return;
   todos = todos.filter(t => t.id !== id);
-  save();
 }
 
 export function toggleTodo(id: number): void {
@@ -92,155 +62,8 @@ export function toggleTodo(id: number): void {
   todos = todos.map(t =>
     t.id === id ? { ...t, done: !t.done } : t
   );
-  save();
 }
 
 export function clearCompleted(): void {
   todos = todos.filter(t => !t.done);
-  save();
-}
-
-/* ========== 7. 筛选（从 render 里抽出来，降复杂度） ========== */
-function getVisibleTodos(): Todo[] {
-  return todos.filter(todo => {
-    if (filter === 'active') return !todo.done;
-    if (filter === 'completed') return todo.done;
-    return true;
-  });
-}
-
-/* ========== 8. 创建单个 li（从 render 里抽出来） ========== */
-function createTodoItem(todo: Todo): HTMLLIElement {
-  const li = document.createElement('li');
-  li.dataset.id = String(todo.id);
-  if (todo.done) li.classList.add('done');
-
-  const span = document.createElement('span');
-  span.className = 'text';
-  span.dataset.action = 'toggle';
-  span.textContent = todo.text;
-
-  const edit = document.createElement('button');
-  edit.className = 'edit';
-  edit.dataset.action = 'edit';
-  edit.textContent = '✎';
-
-  const del = document.createElement('button');
-  del.className = 'del';
-  del.dataset.action = 'delete';
-  del.textContent = '×';
-
-  li.appendChild(span);
-  li.appendChild(edit);
-  li.appendChild(del);
-  return li;
-}
-
-/* ========== 9. 渲染 ========== */
-export function render(): void {
-  const list = document.querySelector<HTMLUListElement>('#list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  const visibleTodos = getVisibleTodos();
-  if (visibleTodos.length === 0) {
-    const li = document.createElement('li');
-    li.textContent = '暂无任务';
-    list.appendChild(li);
-  } else {
-    visibleTodos.forEach(todo => {
-      list.appendChild(createTodoItem(todo));
-    });
-  }
-
-  const count = document.querySelector<HTMLSpanElement>('#count');
-  if (count) {
-    const activeCount = todos.filter(t => !t.done).length;
-    count.textContent = `${activeCount} 项未完成`;
-  }
-
-  document.querySelectorAll<HTMLButtonElement>('.filters button').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.filter === filter);
-  });
-}
-
-/* ========== 10. 事件委托 ========== */
-function handleDelete(id: number): void {
-  removeTodo(id);
-  render();
-}
-
-function handleEdit(id: number): void {
-  const todo = todos.find(t => t.id === id);
-  if (!todo) return;
-  const next = prompt('编辑任务', todo.text);
-  if (next === null) return;
-  const text = next.trim();
-  if (!text) return;
-  todos = todos.map(t => (t.id === id ? { ...t, text } : t));
-  save();
-  render();
-}
-
-function handleToggle(id: number): void {
-  toggleTodo(id);
-  render();
-}
-
-export function bindEvents(): void {
-  const list = document.querySelector<HTMLUListElement>('#list');
-  if (!list) return;
-
-  list.addEventListener('click', (e: Event) => {
-    if (!(e.target instanceof Element)) return;
-    const item = e.target.closest<HTMLLIElement>('li');
-    if (!item || !list.contains(item)) return;
-    const rawId = item.dataset.id;
-    if (!rawId) return;
-    const id = Number(rawId);
-    if (Number.isNaN(id)) return;
-
-    if (e.target.closest('[data-action="delete"]')) {
-      handleDelete(id);
-    } else if (e.target.closest('[data-action="edit"]')) {
-      handleEdit(id);
-    } else if (e.target.closest('[data-action="toggle"]')) {
-      handleToggle(id);
-    }
-  });
-
-  const addBtn = document.querySelector<HTMLButtonElement>('#add-btn');
-  const input = document.querySelector<HTMLInputElement>('#new-todo');
-  if (addBtn && input) {
-    addBtn.addEventListener('click', () => {
-      addTodo(input.value);
-      input.value = '';
-      render();
-    });
-    input.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        addTodo(input.value);
-        input.value = '';
-        render();
-      }
-    });
-  }
-
-  document.querySelectorAll<HTMLButtonElement>('.filters button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const f = btn.dataset.filter;
-      if (f === 'all' || f === 'active' || f === 'completed') {
-        filter = f;
-        render();
-      }
-    });
-  });
-
-  const clearBtn = document.querySelector<HTMLButtonElement>('#clear-completed');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      clearCompleted();
-      render();
-    });
-  }
 }
