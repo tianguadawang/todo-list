@@ -1,19 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { addTodo, toggleTodo, getTodos, resetTodos } from '../src/todo';
-
-// 模拟浏览器 localStorage（Node 环境没有）
-const store: Record<string, string> = {};
-vi.stubGlobal('localStorage', {
-  getItem: (key: string) => store[key] ?? null,
-  setItem: (key: string, value: string) => { store[key] = value; },
-  removeItem: (key: string) => { delete store[key]; },
-  clear: () => { Object.keys(store).forEach(k => delete store[k]); }
-});
 
 describe('addTodo', () => {
   beforeEach(() => {
     resetTodos();
-    localStorage.clear();
   });
 
   it('正常添加：todos 长度 +1，内容正确', () => {
@@ -39,7 +29,6 @@ describe('addTodo', () => {
 describe('toggleTodo', () => {
   beforeEach(() => {
     resetTodos();
-    localStorage.clear();
   });
 
   it('正常切换：done 从 false 变 true', () => {
@@ -61,7 +50,6 @@ describe('toggleTodo', () => {
 describe('AI 测试审查后的修补用例', () => {
   beforeEach(() => {
     resetTodos();
-    localStorage.clear();
   });
 
   it('空字符串不添加（精确断言长度 0）', () => {
@@ -99,19 +87,5 @@ describe('AI 测试审查后的修补用例', () => {
     const before = getTodos()[0].done;
     toggleTodo(NaN);
     expect(getTodos()[0].done).toBe(before);
-  });
-});
-
-describe('业务防御：无效 id 不触发持久化', () => {
-  beforeEach(() => {
-    resetTodos();
-    localStorage.clear();
-  });
-
-  it('toggleTodo 不存在的 id 不写入 localStorage', () => {
-    addTodo('A');
-    localStorage.clear(); // 清掉 addTodo 的写入
-    toggleTodo(999999);
-    expect(localStorage.getItem('todos')).toBeNull();
   });
 });

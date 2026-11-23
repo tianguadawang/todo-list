@@ -5,11 +5,8 @@ export interface Todo {
   done: boolean;
 }
 
-export type Filter = 'all' | 'active' | 'completed';
-
 /* ========== 2. 状态 ========== */
 let todos: Todo[] = [];
-let filter: Filter = 'all';
 let lastId = 0;
 
 function nextId(): number {
@@ -25,25 +22,9 @@ export function getTodos(): Todo[] {
 
 export function resetTodos(): void {
   todos = [];
-  filter = 'all';
 }
 
-/* ========== 4. 运行时校验 ========== */
-function isTodo(value: unknown): value is Todo {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === 'number' &&
-    typeof v.text === 'string' &&
-    typeof v.done === 'boolean'
-  );
-}
-
-function isTodoArray(value: unknown): value is Todo[] {
-  return Array.isArray(value) && value.every(isTodo);
-}
-
-/* ========== 5. 纯函数操作逻辑（供 React 调用和测试） ========== */
+/* ========== 4. 纯函数操作逻辑 ========== */
 export function addTodo(text: string): void {
   if (typeof text !== 'string') return;
   const trimmed = text.trim();
@@ -62,8 +43,4 @@ export function toggleTodo(id: number): void {
   todos = todos.map(t =>
     t.id === id ? { ...t, done: !t.done } : t
   );
-}
-
-export function clearCompleted(): void {
-  todos = todos.filter(t => !t.done);
 }
