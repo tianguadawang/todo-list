@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TodoForm from './components/TodoForm';
 import TodoList from './components/TodoList';
+import { useTheme } from './ThemeContext';
 
 export interface Todo {
   id: number;
@@ -8,8 +9,27 @@ export interface Todo {
   done: boolean;
 }
 
+// 安全读取
+const loadTodos = (): Todo[] => {
+  try {
+    const saved = localStorage.getItem('todos');
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 export default function App() {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  // 惰性初始化
+  const [todos, setTodos] = useState<Todo[]>(loadTodos);
+  const { theme, setTheme } = useTheme();
+
+  // 单 Effect 写入
+  useEffect(() => {
+    localStorage.setItem('todos', JSON.stringify(todos));
+  }, [todos]);
 
   const addTodo = (text: string) => {
     const trimmed = text.trim();
@@ -28,8 +48,12 @@ export default function App() {
   };
 
   return (
-    <div>
+    // 动态绑定主题 class
+    <div className={theme}>
       <h1>Todo V4.0</h1>
+      <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+        切换主题 (当前: {theme})
+      </button>
       <TodoForm onAdd={addTodo} />
       <TodoList todos={todos} onToggle={toggleTodo} onDelete={removeTodo} />
     </div>

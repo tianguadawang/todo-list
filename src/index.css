@@ -1,5 +1,10 @@
-body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; transition: background-color 0.3s, color 0.3s; }
 ul { list-style: none; padding: 0; }
 li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
 .done { text-decoration: line-through; color: #aaa; }
 button { cursor: pointer; }
+
+/* 主题样式 */
+.light { background-color: #ffffff; color: #000000; min-height: 100vh; }
+.dark { background-color: #1e1e1e; color: #ffffff; min-height: 100vh; }
+.dark li { border-bottom-color: #444; }
